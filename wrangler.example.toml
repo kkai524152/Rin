@@ -3,8 +3,7 @@ name = "rin-server"
 main = "server/src/_worker.ts"
 compatibility_date = "2024-05-29"
 # compatibility_flags = ["nodejs_compat"]
-node_compat = true
-
+compatibility_flags = ["nodejs_compat"]
 [triggers]
 crons = ["*/20 * * * *"]
 
@@ -24,4 +23,4 @@ RSS_DESCRIPTION = "Development Environment"
 [[d1_databases]]
 binding = "DB"
 database_name = "rin"
-database_id = "YourDatabaseID"
+database_id = "239d58b4-447d-488d-99d6-76f8eefd90ad"
