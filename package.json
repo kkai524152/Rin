@@ -48,6 +48,7 @@
     "rehype-sanitize": "^6.0.0",
     "remark-gfm": "^4.0.0",
     "remark-math": "^6.0.0",
-    "remark-rehype": "^11.1.0"
+    "remark-rehype": "^11.1.0",
+    "wrangler": "^4.0.0"
   }
 }
