@@ -8,7 +8,13 @@ export function CallbackPage() {
     useEffect(() => {
         const token = searchParams.get('token');
         if (token) {
-            setCookie('token', token, { expires: 7, path: '/' })
+            // 动态获取根域名，支持子域名共享 Cookie
+            const hostname = window.location.hostname;
+            const domainParts = hostname.split('.');
+            // 如果是子域名（如 rin.001211.xyz），提取根域名（.001211.xyz）
+            const rootDomain = domainParts.length > 2 ? '.' + domainParts.slice(-2).join('.') : hostname;
+            
+            setCookie('token', token, { expires: 7, path: '/', domain: rootDomain })
             setLocation("/");
         }
     }, [searchParams]);

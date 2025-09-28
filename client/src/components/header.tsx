@@ -266,7 +266,12 @@ function UserAvatar({ className, profile, onClose }: { className?: string, profi
                     <img src={profile.avatar} alt="Avatar" className="w-8 h-8 rounded-full border" />
                     <div className="z-50 absolute left-0 top-0 w-10 h-8 opacity-0 hover:opacity-100 duration-300">
                         <IconSmall label={t('logout')} name="ri-logout-circle-line" onClick={() => {
-                            removeCookie("token")
+                            // 获取根域名，与设置 Cookie 时保持一致
+                            const hostname = window.location.hostname;
+                            const domainParts = hostname.split('.');
+                            const rootDomain = domainParts.length > 2 ? '.' + domainParts.slice(-2).join('.') : hostname;
+                            
+                            removeCookie("token", { path: '/', domain: rootDomain })
                             window.location.reload()
                         }} hover={false} />
                     </div>
