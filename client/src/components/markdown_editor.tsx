@@ -112,8 +112,6 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
       });
   }
 
-  // 保持向后兼容
-  const uploadImage = uploadFile;
 
   const handlePaste = async (event: React.ClipboardEvent<HTMLDivElement>) => {
     const clipboardData = event.clipboardData;
