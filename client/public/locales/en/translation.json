@@ -246,7 +246,9 @@
   "upload": {
     "failed": "Upload failed",
     "failed$size": "Upload failed, file size cannot exceed {{size}} MB",
-    "title": "Upload"
+    "title": "Upload",
+    "image": "Upload Image",
+    "file": "Upload File"
   },
   "uploading": "Uploading...",
   "url": "Site URL",

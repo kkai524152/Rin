@@ -246,7 +246,9 @@
   "upload": {
     "failed": "上傳失敗",
     "failed$size": "上傳失敗，文件大小不能超過 {{size}} MB",
-    "title": "上傳"
+    "title": "上傳",
+    "image": "上傳圖片",
+    "file": "上傳附件"
   },
   "uploading": "上傳中",
   "url": "網站 URL",
