@@ -103,8 +103,23 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
           showAlert(t("upload.failed"));
         }
         if (data) {
-          // 处理两种返回格式：字符串（fallback）或对象（新功能）
-          const downloadUrl = typeof data === 'string' ? data : data.downloadUrl || data.url;
+          // 处理两种返回格式：
+          // - 字符串：直链到 S3（无 D1 时 fallback）。我们改写成 /storage/f/<key>?name=<原名>
+          // - 对象：包含 downloadUrl（有 D1 时）
+          let downloadUrl: string;
+          if (typeof data === 'string') {
+            try {
+              const u = new URL(data);
+              const keyPath = u.pathname; // 形如 /images/<hash>.<ext>
+              // 代理到后端，携带原始文件名参数
+              downloadUrl = `/storage/f${keyPath}?name=${encodeURIComponent(file.name)}`;
+            } catch {
+              // 如果解析失败，退回原地址
+              downloadUrl = data;
+            }
+          } else {
+            downloadUrl = data.downloadUrl || data.url;
+          }
           onSuccess(downloadUrl);
         }
       })
