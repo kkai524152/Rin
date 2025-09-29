@@ -103,7 +103,7 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
           showAlert(t("upload.failed"));
         }
         if (data) {
-          // 使用下载链接而不是直接的文件URL
+          // 处理两种返回格式：字符串（fallback）或对象（新功能）
           const downloadUrl = typeof data === 'string' ? data : data.downloadUrl || data.url;
           onSuccess(downloadUrl);
         }

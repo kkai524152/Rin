@@ -61,19 +61,25 @@ export function StorageService() {
                         const response = await s3.send(new PutObjectCommand({ Bucket: bucket, Key: hashkey, Body: file, ContentType: file.type }))
                         console.info(response);
                         
-                        // 保存文件信息到数据库
-                        const fileRecord = await db.insert(files).values({
-                            originalName: key,
-                            storageKey: hashkey,
-                            mimeType: file.type,
-                            size: file.size,
-                            uid: uid
-                        }).returning({ id: files.id });
-                        
-                        return {
-                            id: fileRecord[0].id,
-                            url: `${accessHost}/${hashkey}`,
-                            downloadUrl: `/storage/download/${fileRecord[0].id}`
+                        try {
+                            // 尝试保存文件信息到数据库
+                            const fileRecord = await db.insert(files).values({
+                                originalName: key,
+                                storageKey: hashkey,
+                                mimeType: file.type,
+                                size: file.size,
+                                uid: uid
+                            }).returning({ id: files.id });
+                            
+                            return {
+                                id: fileRecord[0].id,
+                                url: `${accessHost}/${hashkey}`,
+                                downloadUrl: `/storage/download/${fileRecord[0].id}`
+                            }
+                        } catch (dbError: any) {
+                            // 如果数据库操作失败（比如files表不存在），使用原来的逻辑
+                            console.warn('Database operation failed, using fallback:', dbError.message);
+                            return `${accessHost}/${hashkey}`;
                         }
                     } catch (e: any) {
                         set.status = 400;
@@ -105,7 +111,7 @@ export function StorageService() {
                     }
                     
                     try {
-                        // 从数据库获取文件信息
+                        // 尝试从数据库获取文件信息
                         const fileRecord = await db.select().from(files).where(eq(files.id, parseInt(id))).limit(1);
                         if (fileRecord.length === 0) {
                             set.status = 404;
@@ -138,6 +144,11 @@ export function StorageService() {
                             headers: headers
                         });
                     } catch (e: any) {
+                        // 如果数据库操作失败，返回错误
+                        if (e.message.includes('no such table: files')) {
+                            set.status = 503;
+                            return 'File download service not available (database migration needed)';
+                        }
                         set.status = 500;
                         console.error(e.message);
                         return e.message;
