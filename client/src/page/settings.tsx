@@ -90,6 +90,15 @@ export function Settings() {
                 .then(({ data }) => {
                     if (data && typeof data !== "string") {
                         showAlert(t("settings.favicon.update.success"));
+                        // 触发前端 favicon 版本号更新，避免缓存
+                        const v = String(Date.now());
+                        sessionStorage.setItem('favicon_v', v);
+                        const links = document.querySelectorAll("link[rel='icon']");
+                        links.forEach(l => {
+                            const href = l.getAttribute('href') || '';
+                            const base = href.split('?')[0];
+                            l.setAttribute('href', `${base}?v=${v}`);
+                        });
                     }
                 })
                 .catch((err) => {

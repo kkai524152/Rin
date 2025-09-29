@@ -74,7 +74,8 @@ function App() {
     }
     ref.current = true
   }, [])
-  const favicon = `${process.env.API_URL}/favicon`;
+  const faviconVersion = sessionStorage.getItem('favicon_v') || '';
+  const favicon = `${process.env.API_URL}/favicon${faviconVersion ? `?v=${faviconVersion}` : ''}`;
   return (
     <>
       <ClientConfigContext.Provider value={config}>
