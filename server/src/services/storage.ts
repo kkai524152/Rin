@@ -131,10 +131,11 @@ export function StorageService() {
                             return 'File not found in storage';
                         }
                         
-                        // 设置响应头，使用原始文件名
+                        // 设置响应头，使用原始文件名（同时包含 filename 与 filename* 以兼容中文）
                         const headers = new Headers();
+                        const asciiFallback = file.originalName.replace(/[^\x00-\x7F]/g, '_');
                         headers.set('Content-Type', file.mimeType || 'application/octet-stream');
-                        headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalName)}"`);
+                        headers.set('Content-Disposition', `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(file.originalName)}`);
                         if (file.size) {
                             headers.set('Content-Length', file.size.toString());
                         }
@@ -149,6 +150,41 @@ export function StorageService() {
                             set.status = 503;
                             return 'File download service not available (database migration needed)';
                         }
+                        set.status = 500;
+                        console.error(e.message);
+                        return e.message;
+                    }
+                })
+                // 无需数据库的下载代理：/storage/f/<key>?name=<originalName>
+                .get('/f/*', async ({ set, params, query }) => {
+                    if (!endpoint) {
+                        set.status = 500;
+                        return 'S3_ENDPOINT is not defined'
+                    }
+                    if (!bucket) {
+                        set.status = 500;
+                        return 'S3_BUCKET is not defined'
+                    }
+                    const keyParam = params['*'];
+                    if (!keyParam) {
+                        set.status = 400;
+                        return 'Missing key'
+                    }
+                    const originalName = typeof query.name === 'string' ? query.name : 'download';
+                    try {
+                        const response = await s3.send(new GetObjectCommand({ Bucket: bucket, Key: keyParam }));
+                        if (!response.Body) {
+                            set.status = 404;
+                            return 'File not found in storage';
+                        }
+                        const headers = new Headers();
+                        const asciiFallback = originalName.replace(/[^\x00-\x7F]/g, '_');
+                        const contentType = response.ContentType || 'application/octet-stream';
+                        if (response.ContentLength) headers.set('Content-Length', String(response.ContentLength));
+                        headers.set('Content-Type', contentType);
+                        headers.set('Content-Disposition', `attachment; filename="${asciiFallback}"; filename*=UTF-8''${encodeURIComponent(originalName)}`);
+                        return new Response(response.Body as ReadableStream, { status: 200, headers });
+                    } catch (e: any) {
                         set.status = 500;
                         console.error(e.message);
                         return e.message;
