@@ -1,5 +1,5 @@
 import Elysia, { t } from "elysia";
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import { getEnv } from "../utils/di";
 import { setup } from "../setup";
 import { createS3Client } from "../utils/s3";
@@ -27,19 +27,25 @@ export function FaviconService() {
         .use(setup())
         .get("/favicon", async ({ set }) => {
             try {
-                const response = await fetch(
-                    new Request(`${accessHost}/${faviconKey}`),
-                );
-
-                if (!response.ok) {
-                    set.status = response.status;
-                    return await response.text();
+                // 优先直接从 R2 读取，避免 bucket 公网不可见导致 404
+                try {
+                    const obj = await s3.send(new GetObjectCommand({
+                        Bucket: bucket,
+                        Key: faviconKey,
+                    }));
+                    set.headers["Content-Type"] = obj.ContentType || "image/webp";
+                    set.headers["Cache-Control"] = obj.CacheControl || "public, max-age=31536000";
+                    return obj.Body as ReadableStream;
+                } catch (_e) {
+                    const response = await fetch(new Request(`${accessHost}/${faviconKey}`));
+                    if (!response.ok) {
+                        set.status = response.status;
+                        return await response.text();
+                    }
+                    set.headers["Content-Type"] = "image/webp";
+                    set.headers["Cache-Control"] = "public, max-age=31536000"; // 1 year
+                    return await response.arrayBuffer();
                 }
-
-                set.headers["Content-Type"] = "image/webp";
-                set.headers["Cache-Control"] = "public, max-age=31536000"; // 1 year
-
-                return await response.arrayBuffer();
             } catch (error) {
                 if (error instanceof Error) {
                     set.status = 500;
@@ -106,13 +112,13 @@ export function FaviconService() {
                         `originFavicon${FAVICON_ALLOWED_TYPES[file.type]}`,
                     );
 
-                    await s3.send(
-                        new PutObjectCommand({
-                            Bucket: bucket,
-                            Key: originFaviconKey,
-                            Body: file,
-                        }),
-                    );
+                    await s3.send(new PutObjectCommand({
+                        Bucket: bucket,
+                        Key: originFaviconKey,
+                        Body: file,
+                        ContentType: file.type,
+                        CacheControl: "public, max-age=31536000",
+                    }));
 
                     const imageRequest = new Request(
                         `${accessHost}/${originFaviconKey}`,
@@ -141,13 +147,13 @@ export function FaviconService() {
                     const arrayBuffer = await response.arrayBuffer();
                     const buffer = Buffer.from(arrayBuffer);
 
-                    await s3.send(
-                        new PutObjectCommand({
-                            Bucket: bucket,
-                            Key: faviconKey,
-                            Body: buffer,
-                        }),
-                    );
+                    await s3.send(new PutObjectCommand({
+                        Bucket: bucket,
+                        Key: faviconKey,
+                        Body: buffer,
+                        ContentType: "image/webp",
+                        CacheControl: "public, max-age=31536000",
+                    }));
 
                     return {
                         url: `${accessHost}/${faviconKey}`,
