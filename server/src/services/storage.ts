@@ -28,7 +28,7 @@ export function StorageService() {
         .use(setup())
         .group('/storage', (group) =>
             group
-                .post('/', async ({ uid, set, body: { key, file } }) => {
+                .post('/', async ({ uid, set, body: { key, file }, request }) => {
 
                     if (!endpoint) {
                         set.status = 500;
@@ -71,10 +71,13 @@ export function StorageService() {
                                 uid: uid
                             }).returning({ id: files.id });
                             
+                            const origin = (() => {
+                                try { return new URL(request.url).origin } catch { return '' }
+                            })();
                             return {
                                 id: fileRecord[0].id,
                                 url: `${accessHost}/${hashkey}`,
-                                downloadUrl: `/storage/download/${fileRecord[0].id}`
+                                downloadUrl: origin ? `${origin}/storage/download/${fileRecord[0].id}` : `/storage/download/${fileRecord[0].id}`
                             }
                         } catch (dbError: any) {
                             // 如果数据库操作失败（比如files表不存在），使用原来的逻辑
