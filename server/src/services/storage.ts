@@ -1,9 +1,11 @@
-import { PutObjectCommand } from "@aws-sdk/client-s3";
+import { GetObjectCommand, PutObjectCommand } from "@aws-sdk/client-s3";
 import Elysia, { t } from "elysia";
 import path from "node:path";
 import type { Env } from "../db/db";
+import { files } from "../db/schema";
+import { eq } from "drizzle-orm";
 import { setup } from "../setup";
-import { getEnv } from "../utils/di";
+import { getDB, getEnv } from "../utils/di";
 import { createS3Client } from "../utils/s3";
 
 function buf2hex(buffer: ArrayBuffer) {
@@ -14,6 +16,7 @@ function buf2hex(buffer: ArrayBuffer) {
 
 export function StorageService() {
     const env: Env = getEnv();
+    const db = getDB();
     const endpoint = env.S3_ENDPOINT;
     const bucket = env.S3_BUCKET;
     const folder = env.S3_FOLDER || '';
@@ -57,7 +60,21 @@ export function StorageService() {
                     try {
                         const response = await s3.send(new PutObjectCommand({ Bucket: bucket, Key: hashkey, Body: file, ContentType: file.type }))
                         console.info(response);
-                        return `${accessHost}/${hashkey}`
+                        
+                        // 保存文件信息到数据库
+                        const fileRecord = await db.insert(files).values({
+                            originalName: key,
+                            storageKey: hashkey,
+                            mimeType: file.type,
+                            size: file.size,
+                            uid: uid
+                        }).returning({ id: files.id });
+                        
+                        return {
+                            id: fileRecord[0].id,
+                            url: `${accessHost}/${hashkey}`,
+                            downloadUrl: `/storage/download/${fileRecord[0].id}`
+                        }
                     } catch (e: any) {
                         set.status = 400;
                         console.error(e.message)
@@ -68,6 +85,63 @@ export function StorageService() {
                         key: t.String(),
                         file: t.File()
                     })
+                })
+                .get('/download/:id', async ({ set, params: { id } }) => {
+                    if (!endpoint) {
+                        set.status = 500;
+                        return 'S3_ENDPOINT is not defined'
+                    }
+                    if (!accessKeyId) {
+                        set.status = 500;
+                        return 'S3_ACCESS_KEY_ID is not defined'
+                    }
+                    if (!secretAccessKey) {
+                        set.status = 500;
+                        return 'S3_SECRET_ACCESS_KEY is not defined'
+                    }
+                    if (!bucket) {
+                        set.status = 500;
+                        return 'S3_BUCKET is not defined'
+                    }
+                    
+                    try {
+                        // 从数据库获取文件信息
+                        const fileRecord = await db.select().from(files).where(eq(files.id, parseInt(id))).limit(1);
+                        if (fileRecord.length === 0) {
+                            set.status = 404;
+                            return 'File not found';
+                        }
+                        
+                        const file = fileRecord[0];
+                        
+                        // 从S3获取文件
+                        const response = await s3.send(new GetObjectCommand({
+                            Bucket: bucket,
+                            Key: file.storageKey
+                        }));
+                        
+                        if (!response.Body) {
+                            set.status = 404;
+                            return 'File not found in storage';
+                        }
+                        
+                        // 设置响应头，使用原始文件名
+                        const headers = new Headers();
+                        headers.set('Content-Type', file.mimeType || 'application/octet-stream');
+                        headers.set('Content-Disposition', `attachment; filename="${encodeURIComponent(file.originalName)}"`);
+                        if (file.size) {
+                            headers.set('Content-Length', file.size.toString());
+                        }
+                        
+                        return new Response(response.Body as ReadableStream, {
+                            status: 200,
+                            headers: headers
+                        });
+                    } catch (e: any) {
+                        set.status = 500;
+                        console.error(e.message);
+                        return e.message;
+                    }
                 })
         );
 }

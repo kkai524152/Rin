@@ -116,6 +116,17 @@ export const hashtagsRelations = relations(hashtags, ({ many }) => ({
     feeds: many(feedHashtags),
 }));
 
+export const files = sqliteTable("files", {
+    id: integer("id").primaryKey(),
+    originalName: text("original_name").notNull(),
+    storageKey: text("storage_key").notNull(),
+    mimeType: text("mime_type"),
+    size: integer("size"),
+    uid: integer("uid").references(() => users.id).notNull(),
+    createdAt: created_at,
+    updatedAt: updated_at,
+});
+
 export const feedHashtagsRelations = relations(feedHashtags, ({ one }) => ({
     feed: one(feeds, {
         fields: [feedHashtags.feedId],
@@ -124,5 +135,12 @@ export const feedHashtagsRelations = relations(feedHashtags, ({ one }) => ({
     hashtag: one(hashtags, {
         fields: [feedHashtags.hashtagId],
         references: [hashtags.id],
+    }),
+}));
+
+export const filesRelations = relations(files, ({ one }) => ({
+    user: one(users, {
+        fields: [files.uid],
+        references: [users.id],
     }),
 }));

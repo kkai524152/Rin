@@ -103,7 +103,9 @@ export function MarkdownEditor({ content, setContent, placeholder = "> Write you
           showAlert(t("upload.failed"));
         }
         if (data) {
-          onSuccess(data);
+          // 使用下载链接而不是直接的文件URL
+          const downloadUrl = typeof data === 'string' ? data : data.downloadUrl || data.url;
+          onSuccess(downloadUrl);
         }
       })
       .catch((e: any) => {
