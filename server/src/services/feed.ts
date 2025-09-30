@@ -501,8 +501,10 @@ export function FeedService() {
                 },
                 orderBy: [desc(feeds.createdAt), desc(feeds.updatedAt)],
             }))).map(({ content, hashtags, summary, ...other }) => {
+                // 过滤掉内容中的附件链接（URL格式）
+                const filteredContent = content.replace(/https?:\/\/[^\s]+/g, '');
                 return {
-                    summary: summary.length > 0 ? summary : content.length > 100 ? content.slice(0, 100) : content,
+                    summary: summary.length > 0 ? summary : filteredContent.length > 100 ? filteredContent.slice(0, 100) : filteredContent,
                     hashtags: hashtags.map(({ hashtag }) => hashtag),
                     ...other
                 }
