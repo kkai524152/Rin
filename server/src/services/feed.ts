@@ -62,8 +62,25 @@ export function FeedService() {
                     })).map(({ content, hashtags, summary, ...other }) => {
                         // 提取首图
                         const avatar = extractImage(content);
+                        
+                        // 生成摘要，过滤掉链接
+                        let generatedSummary = '';
+                        if (summary.length > 0) {
+                            generatedSummary = summary;
+                        } else {
+                            // 如果内容以链接开头，跳过链接部分
+                            let textContent = content;
+                            const linkRegex = /^(\[.*?\]\(.*?\)\s*)+/;
+                            const linkMatch = textContent.match(linkRegex);
+                            if (linkMatch) {
+                                textContent = textContent.substring(linkMatch[0].length).trim();
+                            }
+                            
+                            generatedSummary = textContent.length > 100 ? textContent.slice(0, 100) : textContent;
+                        }
+                        
                         return {
-                            summary: summary.length > 0 ? summary : content.length > 100 ? content.slice(0, 100) : content,
+                            summary: generatedSummary,
                             hashtags: hashtags.map(({ hashtag }) => hashtag),
                             avatar,
                             ...other
