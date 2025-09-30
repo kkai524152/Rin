@@ -71,6 +71,10 @@ export function Markdown({ content }: { content: string }) {
             previousContent,
             offset
           );
+          
+          // 调试信息：打印图片链接
+          console.log('Image src:', src, 'alt:', props.alt);
+          
           const Image = ({
             rounded,
             scale,
@@ -86,6 +90,9 @@ export function Markdown({ content }: { content: string }) {
               }}
               className={`mx-auto ${rounded ? "rounded-xl" : ""}`}
               style={{ zoom: scale }}
+              onError={(e) => {
+                console.error('Image load error:', src, e);
+              }}
             />
           );
           if (
