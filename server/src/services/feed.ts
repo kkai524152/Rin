@@ -70,10 +70,21 @@ export function FeedService() {
                         } else {
                             // 如果内容以链接开头，跳过链接部分
                             let textContent = content;
-                            const linkRegex = /^(\[.*?\]\(.*?\)\s*)+/;
+                            
+                            // 匹配 Markdown 图片语法 ![alt](url) 和普通链接 [text](url)
+                            const linkRegex = /^(\!?\[.*?\]\([^)]+\)\s*)+/;
                             const linkMatch = textContent.match(linkRegex);
+                            console.log('Content:', textContent.substring(0, 200));
+                            console.log('Link match:', linkMatch);
                             if (linkMatch) {
+                                console.log('Matched link:', linkMatch[0]);
                                 textContent = textContent.substring(linkMatch[0].length).trim();
+                                console.log('After removing link:', textContent);
+                            }
+                            
+                            // 如果过滤后内容为空，使用原始内容的前100个字符
+                            if (textContent.length === 0) {
+                                textContent = content;
                             }
                             
                             generatedSummary = textContent.length > 100 ? textContent.slice(0, 100) : textContent;

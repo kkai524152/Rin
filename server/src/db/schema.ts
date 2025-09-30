@@ -117,7 +117,7 @@ export const hashtagsRelations = relations(hashtags, ({ many }) => ({
 }));
 
 export const files = sqliteTable("files", {
-    id: integer("id").primaryKey(),
+    id: text("id").primaryKey(),
     originalName: text("original_name").notNull(),
     storageKey: text("storage_key").notNull(),
     mimeType: text("mime_type"),

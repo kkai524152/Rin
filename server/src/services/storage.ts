@@ -57,6 +57,11 @@ export function StorageService() {
                     );
                     const hash = buf2hex(hashArray)
                     const hashkey = path.join(folder, hash + "." + suffix);
+                    
+                    // 生成文件ID：使用文件哈希 + 时间戳 + 随机数
+                    const timestamp = Date.now().toString(36);
+                    const random = Math.random().toString(36).substring(2, 8);
+                    const fileId = `${hash.substring(0, 8)}_${timestamp}_${random}`;
                     try {
                         const response = await s3.send(new PutObjectCommand({ Bucket: bucket, Key: hashkey, Body: file, ContentType: file.type }))
                         console.info(response);
@@ -64,6 +69,7 @@ export function StorageService() {
                         try {
                             // 尝试保存文件信息到数据库
                             const fileRecord = await db.insert(files).values({
+                                id: fileId,
                                 originalName: key,
                                 storageKey: hashkey,
                                 mimeType: file.type,
@@ -115,7 +121,7 @@ export function StorageService() {
                     
                     try {
                         // 尝试从数据库获取文件信息
-                        const fileRecord = await db.select().from(files).where(eq(files.id, parseInt(id))).limit(1);
+                        const fileRecord = await db.select().from(files).where(eq(files.id, id)).limit(1);
                         if (fileRecord.length === 0) {
                             set.status = 404;
                             return 'File not found';
